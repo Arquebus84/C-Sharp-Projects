@@ -3,6 +3,12 @@ using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 
+/**Note: This C# code is compatible with Unity Software, as well as any Inverse Kinematics System application. For an implenetation on any humanoid characters, import your 
+existing animation files, (Blender, Mixamo, etc.) or create them in the Unity Software itself; this script will automatically reference the Animator Component. In addition,
+for the FABRIK implementation (Forward And Backwards Reverse Inverse Kinematics), it is recommented to utilize the algorithm developed by DitzelGames; their technique is
+shown and utilized in this video: https://www.youtube.com/watch?v=qqOAzn05fvk&t=1623s
+*/
+
 public class FootPosition : MonoBehaviour
 {
     public Animator animator;
@@ -31,7 +37,7 @@ public class FootPosition : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        //Change the IKTarget for each foot to the position of their respective transforms
+        //Change the IKTarget for each foot to the position of their respective animation transforms
         leftFootTarget.position = new Vector3(center.position.x + -0.2f, (animator.GetIKPosition(AvatarIKGoal.LeftFoot)).y, 
             (animator.GetIKPosition(AvatarIKGoal.LeftFoot)).z);
         rightFootTarget.position = new Vector3(center.position.x + 0.2f, (animator.GetIKPosition(AvatarIKGoal.RightFoot)).y, 
@@ -59,7 +65,7 @@ public class FootPosition : MonoBehaviour
         Ray leftRay = new Ray(leftPos, Vector3.down);
         Ray rightRay = new Ray(rightPos, Vector3.down);
 
-        RaycastHit hitInfo;                
+        RaycastHit hitInfo;
 
         //Left Ray
         if(Physics.Raycast(leftRay, out hitInfo, 1.9f, groundLayer))
