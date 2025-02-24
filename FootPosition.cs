@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 
-/**Note: This C# code is compatible with Unity Software, as well as any Inverse Kinematics System application. For an implenetation on any humanoid characters, import your 
-existing animation files, (Blender, Mixamo, etc.) or create them in the Unity Software itself; this script will automatically reference the Animator Component. In addition,
-for the FABRIK implementation (Forward And Backwards Reverse Inverse Kinematics), it is recommented to utilize the algorithm developed by DitzelGames; their technique is
+/**Note: This C# code is compatible with Unity Software, as well as any Inverse Kinematics System application, and it is a simple implentation of humanoid foot placement
+
+For an implenetation on any humanoid characters, import your existing animation files, (Blender, Mixamo, etc.) or create them in the Unity Software itself; this script 
+will automatically reference the Animator Component. 
+In addition, for the FABRIK implementation, it is recommented to utilize the algorithm developed by DitzelGames; their technique is
 shown and utilized in this video: https://www.youtube.com/watch?v=qqOAzn05fvk&t=1623s
 */
 
