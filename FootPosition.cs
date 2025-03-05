@@ -1,8 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using Unity.VisualScripting;
-using UnityEngine;
-
 /**Note: This C# code is compatible with Unity Software, as well as any Inverse Kinematics System application, and it is a simple implentation of humanoid foot placement
 
 For an implenetation on any humanoid characters, import your existing animation files, (Blender, Mixamo, etc.) or create them in the Unity Software itself; this script 
@@ -10,6 +5,10 @@ will automatically reference the Animator Component.
 In addition, for the FABRIK implementation, it is recommented to utilize the algorithm developed by DitzelGames; their technique is
 shown and utilized in this video: https://www.youtube.com/watch?v=qqOAzn05fvk&t=1623s
 */
+using System.Collections;
+using System.Collections.Generic;
+using Unity.VisualScripting;
+using UnityEngine;
 
 public class FootPosition : MonoBehaviour
 {
@@ -40,14 +39,14 @@ public class FootPosition : MonoBehaviour
     void Update()
     {
         //Change the IKTarget for each foot to the position of their respective animation transforms
-        leftFootTarget.position = new Vector3(center.position.x + -0.2f, (animator.GetIKPosition(AvatarIKGoal.LeftFoot)).y, 
+        leftFootTarget.position = new Vector3((animator.GetIKPosition(AvatarIKGoal.LeftFoot)).x, (animator.GetIKPosition(AvatarIKGoal.LeftFoot)).y, 
             (animator.GetIKPosition(AvatarIKGoal.LeftFoot)).z);
-        rightFootTarget.position = new Vector3(center.position.x + 0.2f, (animator.GetIKPosition(AvatarIKGoal.RightFoot)).y, 
+        rightFootTarget.position = new Vector3((animator.GetIKPosition(AvatarIKGoal.RightFoot)).x, (animator.GetIKPosition(AvatarIKGoal.RightFoot)).y, 
             (animator.GetIKPosition(AvatarIKGoal.RightFoot)).z);
 
         //IK Target Rotation
-        leftFootTarget.rotation = center.rotation;
-        rightFootTarget.rotation = center.rotation;
+        leftFootTarget.rotation = animator.GetIKRotation(AvatarIKGoal.LeftFoot);
+        rightFootTarget.rotation = animator.GetIKRotation(AvatarIKGoal.RightFoot);
 
         //Feet Base
         leftFootBase.position = new Vector3(leftFootTarget.position.x, leftFootTarget.position.y - 0.15f, leftFootTarget.position.z);
@@ -69,8 +68,8 @@ public class FootPosition : MonoBehaviour
 
         RaycastHit hitInfo;
 
-        //Left Ray
-        if(Physics.Raycast(leftRay, out hitInfo, 1.9f, groundLayer))
+        //Left Ray (Original distance 1.9f)
+        if(Physics.Raycast(leftRay, out hitInfo, 1.75f, groundLayer))
         {
             //Transform the leftFoot base to ray information
             leftFootBase.position = new Vector3((animator.GetIKPosition(AvatarIKGoal.LeftFoot)).x, hitInfo.point.y, 
@@ -90,16 +89,16 @@ public class FootPosition : MonoBehaviour
         {
             //Reset values
             leftFootBase.position = leftFootBase.position;
-            leftFootTarget.position = leftFootTarget.position;
+            //leftFootTarget.position = leftFootTarget.position;
 
             //IKTargets: LeftFoot
             leftFootTarget.position = animator.GetIKPosition(AvatarIKGoal.LeftFoot);
 
             Debug.DrawLine(leftRay.origin, leftRay.origin + leftRay.direction * 1.5f, Color.red);
         }
-                
+
         //Right Ray
-        if (Physics.Raycast(rightRay, out hitInfo, 1.9f, groundLayer))
+        if (Physics.Raycast(rightRay, out hitInfo, 1.75f, groundLayer))
         {
             //Transform the rightFoot base to ray information
             rightFootBase.position = new Vector3((animator.GetIKPosition(AvatarIKGoal.RightFoot)).x, hitInfo.point.y, 
@@ -119,7 +118,7 @@ public class FootPosition : MonoBehaviour
         {
             //Reset values
             rightFootBase.position = rightFootBase.position;
-            rightFootTarget.position = rightFootTarget.position;
+            //rightFootTarget.position = rightFootTarget.position;
 
             //IKTargets: RightFoot
             rightFootTarget.position = animator.GetIKPosition(AvatarIKGoal.RightFoot);
