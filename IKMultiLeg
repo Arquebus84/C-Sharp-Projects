@@ -40,8 +40,8 @@ public class IKMultiLeg : MonoBehaviour
     protected Quaternion startRotationTarget;
     protected Quaternion startRotationRoot;
 
-    // Update is called once per frame
-    void Update()   //Awake()       //Used Awake(), but needed more legs
+    // Update is called once per frame, FixedUpdate is called before Update, but will be called a set number of times
+    void FixedUpdate()       //Used Awake(), but needed more legs, use FixedUpdate to make it more controlled per frame
     {
         for (int iter = 0; iter < FootBase.Length; iter++)
         {
@@ -101,7 +101,7 @@ public class IKMultiLeg : MonoBehaviour
         }
     }
 
-    //private void LateUpdate()                                     //Omitted in order to run in realtime
+    //void LateUpdate()                                    
     //{
     //    for (int i = 0; i < FootBase.Length; i++)
     //    {
