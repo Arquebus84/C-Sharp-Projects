@@ -1,6 +1,7 @@
 using System;
 using UnityEditor;
 using UnityEngine;
+using static UnityEditor.Progress;
 
 public class IKMultiLeg : MonoBehaviour
 {
@@ -8,14 +9,14 @@ public class IKMultiLeg : MonoBehaviour
     [Header("Parameters")]
 
     //Base Foot; The rest of the chain will be the foot base's parent nodes
-    public Transform[] FootBase;
+    public Transform FootBase;
 
     //Chainlength of bones
     public int chainLength;
 
     //Target and pole
-    public Transform[] target;
-    public Transform[] pole;
+    public Transform target;
+    public Transform pole;
 
     //Solver iterations per update
     [Header("Solver Parameters")]
@@ -41,16 +42,12 @@ public class IKMultiLeg : MonoBehaviour
     protected Quaternion startRotationRoot;
 
     // Update is called once per frame, FixedUpdate is called before Update, but will be called a set number of times
-    void FixedUpdate()       //Used Awake(), but needed more legs, use FixedUpdate to make it more controlled per frame
+    void Awake()       //Used Awake(), but needed more legs, use FixedUpdate to make it more controlled per frame
     {
-        for (int iter = 0; iter < FootBase.Length; iter++)
-        {
-            Init(iter);
-            ResolveIK(iter);
-        }
+        Init();
     }
 
-    void Init(int iter)
+    void Init()
     {
         //      Initialize the arrays
         // System Arrays
@@ -63,16 +60,16 @@ public class IKMultiLeg : MonoBehaviour
         startRotationBone = new Quaternion[chainLength + 1];
 
         //      Initialize fields
-        if (target[iter] == null)                                                                       //target[index]
+        if (target == null)
         {
-            target[iter] = new GameObject(gameObject.name + " Target").transform;
-            target[iter].position = FootBase[iter].transform.position;                          //FootBase is the transform not this* transform       //target[index] & FootBase[index]
+            target = new GameObject(gameObject.name + " Target").transform;
+            target.position = FootBase.transform.position;                          //FootBase is the transform not this* transform
         }
-        startRotationTarget = target[iter].rotation;                                          //target[index]
+        startRotationTarget = target.rotation;
         CompleteLength = 0;
 
         //Initialize data
-        var current = FootBase[iter].transform;                                           //FootBase is the transform not this* transform         //FootBase[index]
+        var current = FootBase.transform;                                           //FootBase is the transform not this* transform
         for (var i = Bones.Length - 1; i >= 0; i--)
         {
             Bones[i] = current;
@@ -81,7 +78,7 @@ public class IKMultiLeg : MonoBehaviour
             if (i == Bones.Length - 1)
             {
                 //Leaf
-                startDirectionSucc[i] = (target[iter].position - current.position);                       //target[index]
+                startDirectionSucc[i] = (target.position - current.position); 
             }
             else
             {
@@ -101,21 +98,18 @@ public class IKMultiLeg : MonoBehaviour
         }
     }
 
-    //void LateUpdate()                                    
-    //{
-    //    for (int i = 0; i < FootBase.Length; i++)
-    //    {
-    //        ResolveIK(i);
-    //    }
-    //}
-
-    private void ResolveIK(int iter)
+    void LateUpdate()
     {
-        if (target[iter] == null)     //Make sure to not get NullPointerExceptions                                      //target[index]
+        ResolveIK();
+    }
+
+    private void ResolveIK()
+    {
+        if (target == null)     //Make sure to not get NullPointerExceptions
             return;
 
         if (BonesLength.Length != chainLength)
-            Init(iter);
+            Init();
 
         //Get the positions
         for (int i = 0; i < Bones.Length; i++)
@@ -125,10 +119,10 @@ public class IKMultiLeg : MonoBehaviour
         var rootRotDifference = rootRot * Quaternion.Inverse(startRotationRoot);
 
         //Check if distance is possible to reach
-        if ((target[iter].position - Bones[0].position).sqrMagnitude >= CompleteLength * CompleteLength)                      //target[index]
+        if ((target.position - Bones[0].position).sqrMagnitude >= CompleteLength * CompleteLength)
         {
             //Stretch the bones if it's greater
-            var direction = (target[iter].position - Positions[0]).normalized;                                                //target[index]
+            var direction = (target.position - Positions[0]).normalized;
 
             //Set everything as a subset of the root bone (start at position 0 + 1)
             for (int i = 1; i < Positions.Length; i++)
@@ -147,7 +141,7 @@ public class IKMultiLeg : MonoBehaviour
                 for (int i = Positions.Length - 1; i > 0; i--)
                 {
                     if (i == Positions.Length - 1)
-                        Positions[i] = target[iter].position; //Set it to the target                                              //target[index]
+                        Positions[i] = target.position; //Set it to the target
                     else
                         Positions[i] = Positions[i + 1] + (Positions[i] - Positions[i + 1]).normalized * BonesLength[i]; //Set in line on distance
                 }
@@ -157,7 +151,7 @@ public class IKMultiLeg : MonoBehaviour
                     Positions[i] = Positions[i - 1] + (Positions[i] - Positions[i - 1]).normalized * BonesLength[i - 1];
 
                 //If position is close enough to the 10 solverIterations (in the editor), then stop the loop
-                if ((Positions[Positions.Length - 1] - target[iter].position).sqrMagnitude < delta * delta)                        //target[index]
+                if ((Positions[Positions.Length - 1] - target.position).sqrMagnitude < delta * delta)
                     break;
             }
         }
@@ -168,7 +162,7 @@ public class IKMultiLeg : MonoBehaviour
             for (int i = 1; i < Positions.Length - 1; i++)
             {
                 var plane = new Plane(Positions[i + 1] - Positions[i - 1], Positions[i - 1]);
-                var projectedPole = plane.ClosestPointOnPlane(pole[iter].position);                                                       //pole[index]
+                var projectedPole = plane.ClosestPointOnPlane(pole.position);
                 var projectedBone = plane.ClosestPointOnPlane(Positions[i]);
                 var angle = Vector3.SignedAngle(projectedBone - Positions[i - 1], projectedPole - Positions[i - 1], plane.normal);
                 Positions[i] = Quaternion.AngleAxis(angle, plane.normal) * (Positions[i] - Positions[i - 1]) + Positions[i - 1];
@@ -179,7 +173,7 @@ public class IKMultiLeg : MonoBehaviour
         for (int i = 0; i < Positions.Length; i++)
         {
             if (i == Positions.Length - 1)
-                Bones[i].rotation = target[iter].rotation * Quaternion.Inverse(startRotationTarget) * startRotationBone[i];                       //target[index]
+                Bones[i].rotation = target.rotation * Quaternion.Inverse(startRotationTarget) * startRotationBone[i];
             else
                 Bones[i].rotation = Quaternion.FromToRotation(startDirectionSucc[i], Positions[i + 1] - Positions[i]) * startRotationBone[i];
 
@@ -189,23 +183,22 @@ public class IKMultiLeg : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        for(int iter = 0; iter < FootBase.Length; iter++)
+        if (FootBase == null)           //Make sure that a null Pointer exception (UnassignedReferenceException) is not caught
         {
-            if (FootBase[iter] == null)                     //Check to make sure there is no null pointer exception
-                break;
-            else
+            return;
+        }
+        else
+        {
+            var current = FootBase.transform;
+            for (int i = 0; i < chainLength && current != null && current.parent != null; i++)
             {
-                var current = FootBase[iter].transform;                                                        //FootBase[index]
-                for (int i = 0; i < chainLength && current != null && current.parent != null; i++)
-                {
-                    var scale = Vector3.Distance(current.position, current.parent.position) * 0.1f;
-                    Handles.matrix = Matrix4x4.TRS(current.position, Quaternion.FromToRotation(
-                        Vector3.up, current.parent.position - current.position), new Vector3(scale, Vector3.Distance(current.parent.position, current.position), scale));
-                    Handles.color = Color.green;
-                    Handles.DrawWireCube(Vector3.up * 0.5f, Vector3.one);
-                    current = current.parent;
-                }
+                var scale = Vector3.Distance(current.position, current.parent.position) * 0.1f;
+                Handles.matrix = Matrix4x4.TRS(current.position, Quaternion.FromToRotation(
+                    Vector3.up, current.parent.position - current.position), new Vector3(scale, Vector3.Distance(current.parent.position, current.position), scale));
+                Handles.color = Color.green;
+                Handles.DrawWireCube(Vector3.up * 0.5f, Vector3.one);
+                current = current.parent;
             }
-        }        
+        }
     }
 }
