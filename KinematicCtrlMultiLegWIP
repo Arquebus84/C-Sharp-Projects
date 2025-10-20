@@ -38,7 +38,7 @@ public class KinematicCtrl : MonoBehaviour
 
     public float highestPoint = 0;
 
-    public int index;
+    public int index = 0;
 
     [Header("Editable Parameters")]
     public float acceleration;
@@ -52,38 +52,41 @@ public class KinematicCtrl : MonoBehaviour
     void Update()
     {
         if (index == FootHipBase.Length - 1)
-            index = 0;
-        else
-            index++;
-
-        for (int i = 0; i < FootHipBase.Length; i++)
         {
-            //  Calculate distance, angle, and velocity for even and odds
-            //Angle in Radians is more efficient
-            //  I_Velocity is 0, and time will not be specified, therefore
-            //  Velocity = sqrt[(I_velocity)^2 + (acceleration * distance_FT)]
-            //distance_FT = Mathf.Abs(Vector3.Distance(footIKPos[i].position, futureFootPosition[i].position));
-            //angle_FT = Mathf.Abs(Mathf.DeltaAngle(footIKPos[i].eulerAngles.y, futureFootPosition[i].eulerAngles.y)) * Mathf.Deg2Rad;
-            //velocity = (angle_FT < maxAngle) ? Mathf.Sqrt(acceleration * distance_FT) : Mathf.Sqrt(acceleration * distance_FT * angle_FT);
+            index = 0;
+        }
+        else
+        {
+            index++;
+        }
 
-            if (index % 2 == 0)
-            {
-                EvenDistance_FT = Mathf.Abs(Vector3.Distance(footIKPos[i].position, futureFootPosition[i].position));
-                EvenAngle_FT = Mathf.Abs(Mathf.DeltaAngle(footIKPos[i].eulerAngles.y, futureFootPosition[i].eulerAngles.y)) * Mathf.Deg2Rad;
-                EvenVelocity = (EvenAngle_FT < maxAngle) ? Mathf.Sqrt(acceleration * EvenDistance_FT) : Mathf.Sqrt(acceleration * EvenDistance_FT * EvenAngle_FT);
-                checkDistance(footMesh[i], footIKPos[i], EvenDistance_FT, EvenAngle_FT, index);
-            }
-            else if (index % 2 == 1)
-            {
-                OddDistance_FT = Mathf.Abs(Vector3.Distance(footIKPos[i].position, futureFootPosition[i].position));
-                OddAngle_FT = Mathf.Abs(Mathf.DeltaAngle(footIKPos[i].eulerAngles.y, futureFootPosition[i].eulerAngles.y)) * Mathf.Deg2Rad;
-                OddVelocity = (OddAngle_FT < maxAngle) ? Mathf.Sqrt(acceleration * OddDistance_FT) : Mathf.Sqrt(acceleration * OddDistance_FT * OddAngle_FT);
-                checkDistance(footMesh[i], footIKPos[i], OddDistance_FT, OddAngle_FT, index);
-            }
+        //  Calculate distance, angle, and velocity for even and odds
+        //Angle in Radians is more efficient
+        //  I_Velocity is 0, and time will not be specified, therefore
+        //  Velocity = sqrt[(I_velocity)^2 + (acceleration * distance_FT)]
+        //distance_FT = Mathf.Abs(Vector3.Distance(footIKPos[i].position, futureFootPosition[i].position));
+        //angle_FT = Mathf.Abs(Mathf.DeltaAngle(footIKPos[i].eulerAngles.y, futureFootPosition[i].eulerAngles.y)) * Mathf.Deg2Rad;
+        //velocity = (angle_FT < maxAngle) ? Mathf.Sqrt(acceleration * distance_FT) : Mathf.Sqrt(acceleration * distance_FT * angle_FT);
 
-            //checkDistance(footMesh[i], footIKPos[i], index);
+        if (index % 2 == 0)
+        {
+            EvenDistance_FT = Mathf.Abs(Vector3.Distance(footIKPos[index].position, futureFootPosition[index].position));
+            EvenAngle_FT = Mathf.Abs(Mathf.DeltaAngle(footIKPos[index].eulerAngles.y, futureFootPosition[index].eulerAngles.y)) * Mathf.Deg2Rad;
+            EvenVelocity = (EvenAngle_FT < maxAngle) ? Mathf.Sqrt(acceleration * EvenDistance_FT) : Mathf.Sqrt(acceleration * EvenDistance_FT * EvenAngle_FT);
+            checkDistance(footMesh[index], footIKPos[index], EvenDistance_FT, EvenAngle_FT, index);
+        }
+        else if (index % 2 == 1)
+        {
+            OddDistance_FT = Mathf.Abs(Vector3.Distance(footIKPos[index].position, futureFootPosition[index].position));
+            OddAngle_FT = Mathf.Abs(Mathf.DeltaAngle(footIKPos[index].eulerAngles.y, futureFootPosition[index].eulerAngles.y)) * Mathf.Deg2Rad;
+            OddVelocity = (OddAngle_FT < maxAngle) ? Mathf.Sqrt(acceleration * OddDistance_FT) : Mathf.Sqrt(acceleration * OddDistance_FT * OddAngle_FT);
+            checkDistance(footMesh[index], footIKPos[index], OddDistance_FT, OddAngle_FT, index);
             //groundCheck(i);
         }
+        //for (index = 0; index < FootHipBase.Length; index++)
+        //{
+
+        //}
     }
 
     public void checkDistance(Transform foot, Transform pos, float distance_FT, float angle_FT, int i)
