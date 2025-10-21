@@ -26,9 +26,9 @@ public class KinematicCtrl : MonoBehaviour
     public Transform[] FootHipBase, footMesh, footIKPos, futureFootPosition;        //Removed footBase (Bone)
 
     [Header("Calculated Parameters")]
-
     //  Distance (targetPosVector - footPosVector) will be deltaX
-    public float EvenDistance_FT, OddDistance_FT;       //distance_FT;                //For every index, organize by even and odd in order to retain the kinematics with respect to those objects (foot)
+    public float EvenDistance_FT;       //distance_FT;                //For every index, organize by even and odd in order to retain the kinematics with respect to those objects (foot)
+    public float OddDistance_FT;
     public float EvenAngle_FT, OddAngle_FT;             //angle_FT;
     //  Velocity at t = 0 will be 0
     public float EvenVelocity, OddVelocity;         //velocity;            //Velocity will be different when changing from evens to odds (one foot after another)
@@ -43,7 +43,7 @@ public class KinematicCtrl : MonoBehaviour
     [Header("Editable Parameters")]
     public float acceleration;
     public float maxDistance = 0.2f;
-    public float minDistance = 0.1f;
+    public float minDistance = 0.05f;
     public float maxAngle = 1.55f;     //Angle isn't editable
     public float minAngle = 0.2f;
 
@@ -51,15 +51,6 @@ public class KinematicCtrl : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (index == FootHipBase.Length - 1)
-        {
-            index = 0;
-        }
-        else
-        {
-            index++;
-        }
-
         //  Calculate distance, angle, and velocity for even and odds
         //Angle in Radians is more efficient
         //  I_Velocity is 0, and time will not be specified, therefore
@@ -68,48 +59,74 @@ public class KinematicCtrl : MonoBehaviour
         //angle_FT = Mathf.Abs(Mathf.DeltaAngle(footIKPos[i].eulerAngles.y, futureFootPosition[i].eulerAngles.y)) * Mathf.Deg2Rad;
         //velocity = (angle_FT < maxAngle) ? Mathf.Sqrt(acceleration * distance_FT) : Mathf.Sqrt(acceleration * distance_FT * angle_FT);
 
-        if (index % 2 == 0)
+        if (index == FootHipBase.Length - 1)
+            index = 0;
+        else
         {
-            EvenDistance_FT = Mathf.Abs(Vector3.Distance(footIKPos[index].position, futureFootPosition[index].position));
-            EvenAngle_FT = Mathf.Abs(Mathf.DeltaAngle(footIKPos[index].eulerAngles.y, futureFootPosition[index].eulerAngles.y)) * Mathf.Deg2Rad;
-            EvenVelocity = (EvenAngle_FT < maxAngle) ? Mathf.Sqrt(acceleration * EvenDistance_FT) : Mathf.Sqrt(acceleration * EvenDistance_FT * EvenAngle_FT);
-            checkDistance(footMesh[index], footIKPos[index], EvenDistance_FT, EvenAngle_FT, index);
+            index++;
         }
-        else if (index % 2 == 1)
-        {
-            OddDistance_FT = Mathf.Abs(Vector3.Distance(footIKPos[index].position, futureFootPosition[index].position));
-            OddAngle_FT = Mathf.Abs(Mathf.DeltaAngle(footIKPos[index].eulerAngles.y, futureFootPosition[index].eulerAngles.y)) * Mathf.Deg2Rad;
-            OddVelocity = (OddAngle_FT < maxAngle) ? Mathf.Sqrt(acceleration * OddDistance_FT) : Mathf.Sqrt(acceleration * OddDistance_FT * OddAngle_FT);
-            checkDistance(footMesh[index], footIKPos[index], OddDistance_FT, OddAngle_FT, index);
-            //groundCheck(i);
-        }
-        //for (index = 0; index < FootHipBase.Length; index++)
-        //{
+        for (int i = 0; i < FootHipBase.Length; i++)
+        {   
+            groundCheck(i);
 
-        //}
+            if (index % 2 == 0)
+            {
+                EvenDistance_FT = Mathf.Abs(Vector3.Distance(footIKPos[index].position, futureFootPosition[index].position));
+                EvenAngle_FT = Mathf.Abs(Mathf.DeltaAngle(footIKPos[index].eulerAngles.y, futureFootPosition[index].eulerAngles.y)) * Mathf.Deg2Rad;
+                EvenVelocity = (EvenAngle_FT < maxAngle) ? Mathf.Sqrt(acceleration * EvenDistance_FT) : Mathf.Sqrt(acceleration * EvenDistance_FT * EvenAngle_FT);
+                _isMovingEven = checkDistance(footMesh[index], footIKPos[index], EvenDistance_FT, EvenAngle_FT, _isMovingOdd, index);
+
+                if (_isMovingEven == true)
+                {
+                    translateFoot(EvenVelocity, index, _isMovingEven);
+                }
+            }
+            else if (index % 2 == 1)
+            {
+                OddDistance_FT = Mathf.Abs(Vector3.Distance(footIKPos[index].position, futureFootPosition[index].position));
+                OddAngle_FT = Mathf.Abs(Mathf.DeltaAngle(footIKPos[index].eulerAngles.y, futureFootPosition[index].eulerAngles.y)) * Mathf.Deg2Rad;
+                OddVelocity = (OddAngle_FT < maxAngle) ? Mathf.Sqrt(acceleration * OddDistance_FT) : Mathf.Sqrt(acceleration * OddDistance_FT * OddAngle_FT);
+                _isMovingOdd = checkDistance(footMesh[index], footIKPos[index], OddDistance_FT, OddAngle_FT, _isMovingEven, index);
+
+                if (_isMovingOdd == true)
+                {
+                    translateFoot(OddVelocity, index, _isMovingOdd);
+                }
+            }
+        }
     }
 
-    public void checkDistance(Transform foot, Transform pos, float distance_FT, float angle_FT, int i)
+    public bool checkDistance(Transform foot, Transform pos, float distance_FT, float angle_FT, bool _oppMoving, int i)
     {
         foot.position = pos.position;
         foot.rotation = pos.rotation;
-                                                                                            // If either the distance or the angle between foot and futurePos exceeds max, then it's moving
-        if ((distance_FT > maxDistance || angle_FT > maxAngle) && ((i % 2 == 0) && _isMovingOdd == false)) // Even                
+        // If either the distance or the angle between foot and futurePos exceeds max, then it's moving
+        //if ((distance_FT > maxDistance || angle_FT > maxAngle) && ((i % 2 == 0) && _isMovingOdd == false)) // Even                
+        //{
+        //    _isMovingEven = true;                                                                             // Just fucking kill me
+        //}
+        //else if ((distance_FT > maxDistance || angle_FT > maxAngle) && ((i % 2 == 1) && _isMovingEven == false)) // Odd
+        //{
+        //    _isMovingOdd = true;
+        //}
+        //else if ((distance_FT < minDistance && angle_FT < minAngle) && (i % 2 == 0))  
+        //{
+        //    _isMovingEven = false;
+        //}
+        //else if ((distance_FT < minDistance && angle_FT < minAngle) && (i % 2 == 1))
+        //{
+        //    _isMovingOdd = false;
+        //}
+
+        if (((distance_FT > maxDistance) || (angle_FT > maxAngle)) && _oppMoving == false)
         {
-            _isMovingEven = true;                                                                             // Just fucking kill me
+            return true;
         }
-        else if ((distance_FT > maxDistance || angle_FT > maxAngle) && ((i % 2 == 1) && _isMovingEven == false)) // Odd
+        else if ((distance_FT < minDistance && angle_FT < minAngle) || _oppMoving == true) //  For clarity, both position and angle have to be minimized in order for foot to completely rest
         {
-            _isMovingOdd = true;
+            return false;
         }
-        else if ((distance_FT < minDistance && angle_FT < minAngle) && (i % 2 == 0))  //  For clarity, both position and angle have to be minimized in order for foot to completely rest
-        {
-            _isMovingEven = false;
-        }
-        else if ((distance_FT < minDistance && angle_FT < minAngle) && (i % 2 == 1))
-        {
-            _isMovingOdd = false;
-        }
+        else return false;
     }
 
     public void groundCheck(int i)
@@ -123,16 +140,7 @@ public class KinematicCtrl : MonoBehaviour
         {
             hitPoint = new Vector3(futureFootPosition[i].position.x, hitInfo.point.y, futureFootPosition[i].position.z);
             futureFootPosition[i].position = hitPoint;
-
-            if (_isMovingEven == true && _isMovingOdd == false)
-            {
-                translateFoot(i, _isMovingEven);
-            }
-            else if(_isMovingEven == false && _isMovingOdd == true)
-            {
-                translateFoot(i, _isMovingOdd);
-            }
-            
+                                    
             Debug.DrawLine(ray.origin, hitInfo.point, Color.green);
         }
         else
@@ -144,12 +152,12 @@ public class KinematicCtrl : MonoBehaviour
     /**
      * With multiple feet, every odd index (1, 3, n) will be translated after every even index (0, 2)
      */
-    public void translateFoot(int i, bool _isMovingIndex)
+    public void translateFoot(float velocity, int i, bool _isMovingIndex)
     {
         if (_isMovingIndex)
         {
-            footIKPos[i].position = Vector3.Lerp(footIKPos[i].position, futureFootPosition[i].position, 5 * Time.deltaTime); //velocity * Time.deltaTime);
-            footIKPos[i].rotation = Quaternion.Lerp(footIKPos[i].rotation, futureFootPosition[i].rotation, 5 * Time.deltaTime); //velocity * Time.deltaTime);
+            footIKPos[i].position = Vector3.Lerp(footIKPos[i].position, futureFootPosition[i].position, velocity * Time.deltaTime);
+            footIKPos[i].rotation = Quaternion.Lerp(footIKPos[i].rotation, futureFootPosition[i].rotation, velocity * Time.deltaTime);
             //footVerticalPos(i);
         }
         else
@@ -158,13 +166,13 @@ public class KinematicCtrl : MonoBehaviour
         }
     }
 
-    public void footVerticalPos(int i)
+    public void footVerticalPos(int i, float velocity)
     {
-        float height = (5 * 0.095f); //(velocity * 0.095f);
+        float height = (velocity * 0.095f);
 
         if (x < Mathf.PI)
         {
-            x += 5 * Time.deltaTime; //velocity * Time.deltaTime;     //If isMoving is false, x will be 0 (Look in translateFoot())
+            x += velocity * Time.deltaTime;     //If isMoving is false, x will be 0 (Look in translateFoot())
         }
         else
         {
