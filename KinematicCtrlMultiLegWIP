@@ -41,6 +41,8 @@ public class KinematicCtrl : MonoBehaviour
     public int index = 0;
 
     [Header("Editable Parameters")]
+    public float height;
+
     public float acceleration;
     public float maxDistance = 0.2f;
     public float minDistance = 0.05f;
@@ -78,6 +80,7 @@ public class KinematicCtrl : MonoBehaviour
 
                 if (_isMovingEven == true)
                 {
+                    footVerticalPos(index, EvenVelocity, _isMovingEven);
                     translateFoot(EvenVelocity, index, _isMovingEven);
                 }
             }
@@ -90,6 +93,7 @@ public class KinematicCtrl : MonoBehaviour
 
                 if (_isMovingOdd == true)
                 {
+                    footVerticalPos(index, OddVelocity, _isMovingOdd);
                     translateFoot(OddVelocity, index, _isMovingOdd);
                 }
             }
@@ -122,8 +126,9 @@ public class KinematicCtrl : MonoBehaviour
         {
             return true;
         }
-        else if ((distance_FT < minDistance && angle_FT < minAngle) || _oppMoving == true) //  For clarity, both position and angle have to be minimized in order for foot to completely rest
+        else if ((distance_FT < minDistance && angle_FT < minAngle) && _oppMoving == false) //  For clarity, both position and angle have to be minimized in order for foot to completely rest
         {
+            _oppMoving = true;          //Set the opposite bool to true in order for it to catch-up with the other one
             return false;
         }
         else return false;
@@ -156,9 +161,9 @@ public class KinematicCtrl : MonoBehaviour
     {
         if (_isMovingIndex)
         {
-            footIKPos[i].position = Vector3.Lerp(footIKPos[i].position, futureFootPosition[i].position, velocity * Time.deltaTime);
+            footIKPos[i].position = Vector3.MoveTowards(footIKPos[i].position, futureFootPosition[i].position, velocity * Time.deltaTime);
             footIKPos[i].rotation = Quaternion.Lerp(footIKPos[i].rotation, futureFootPosition[i].rotation, velocity * Time.deltaTime);
-            //footVerticalPos(i);
+            //footVerticalPos(i, velocity);
         }
         else
         {
@@ -166,27 +171,28 @@ public class KinematicCtrl : MonoBehaviour
         }
     }
 
-    public void footVerticalPos(int i, float velocity)
+    public void footVerticalPos(int i, float velocity, bool _isMovingIndex)
     {
-        float height = (velocity * 0.095f);
+        //float height = (velocity * 0.095f);
 
         if (x < Mathf.PI)
         {
-            x += velocity * Time.deltaTime;     //If isMoving is false, x will be 0 (Look in translateFoot())
+            x += (velocity) * Time.deltaTime;     //If isMoving is false, x will be 0 (Look in translateFoot())
+
+            highestPoint = (highestPoint < height) ? height : highestPoint;
+
+            //  Y position modifies the vertical position of the foot
+            //  Using a*Sin(n*x) + h, modify the amplitude (a) and the duration (n) using velocity;
+            //      use target vertical position to adjust the height (h) of the footstep
+            Vector3 y_Pos = new Vector3(footIKPos[i].position.x,
+                futureFootPosition[i].position.y + (height * Mathf.Sin(x)),
+                footIKPos[i].position.z);
+            footIKPos[i].position = y_Pos;
         }
         else
         {
+            _isMovingIndex = false;
             x = 0;
-        }
-
-        highestPoint = (highestPoint < height) ? height : highestPoint;
-
-        //  Y position modifies the vertical position of the foot
-        //  Using a*Sin(n*x) + h, modify the amplitude (a) and the duration (n) using velocity;
-        //      use target vertical position to adjust the height (h) of the footstep
-        Vector3 y_Pos = new Vector3(footIKPos[i].position.x,
-            futureFootPosition[i].position.y + (height * Mathf.Sin(x)),
-            footIKPos[i].position.z);
-        footIKPos[i].position = y_Pos;
+        }        
     }
 }
