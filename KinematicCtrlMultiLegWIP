@@ -38,16 +38,18 @@ public class KinematicCtrl : MonoBehaviour
     public bool _touchedGround;
 
     public float highestPoint = 0;
-
     public int index = 0;
 
+    public float height;
+    public float max_X;
+
     [Header("Editable Parameters")]
-    public float height;    //Can Edit later
+    //public float height;    //Can Edit later
 
     public float acceleration;
     public float maxDistance = 0.2f;
     public float minDistance = 0.05f;
-    public float maxAngle = 1.55f;     //Angle isn't editable
+    public float maxAngle = 1.55f;
     public float minAngle = 0.2f;
 
 
@@ -61,7 +63,7 @@ public class KinematicCtrl : MonoBehaviour
         //distance_FT = Mathf.Abs(Vector3.Distance(footIKPos[i].position, futureFootPosition[i].position));
         //angle_FT = Mathf.Abs(Mathf.DeltaAngle(footIKPos[i].eulerAngles.y, futureFootPosition[i].eulerAngles.y)) * Mathf.Deg2Rad;
         //velocity = (angle_FT < maxAngle) ? Mathf.Sqrt(acceleration * distance_FT) : Mathf.Sqrt(acceleration * distance_FT * angle_FT);
-
+        
         if (index == FootHipBase.Length - 1)
             index = 0;
         else
@@ -82,8 +84,8 @@ public class KinematicCtrl : MonoBehaviour
 
                 if (_isMovingEven == true)
                 {
-                    footVerticalPos(EvenVelocity, index, _isMovingEven);
-                    //translateFoot(EvenVelocity, index, _isMovingEven);
+                    //footVerticalPos(EvenVelocity, index, _isMovingEven);
+                    translateFoot(EvenVelocity, index, _isMovingEven);
                 }
             }
             else if (index % 2 == 1)
@@ -96,8 +98,8 @@ public class KinematicCtrl : MonoBehaviour
 
                 if (_isMovingOdd == true)
                 {
-                    footVerticalPos(OddVelocity, index, _isMovingOdd);
-                    //translateFoot(OddVelocity, index, _isMovingOdd);
+                    //footVerticalPos(OddVelocity, index, _isMovingOdd);
+                    translateFoot(OddVelocity, index, _isMovingOdd);
                 }
             }
         }
@@ -107,29 +109,13 @@ public class KinematicCtrl : MonoBehaviour
     {
         foot.position = pos.position;
         foot.rotation = pos.rotation;
-        // If either the distance or the angle between foot and futurePos exceeds max, then it's moving
-        //if ((distance_FT > maxDistance || angle_FT > maxAngle) && ((i % 2 == 0) && _isMovingOdd == false)) // Even                
-        //{
-        //    _isMovingEven = true;                                                                             // Just fucking kill me
-        //}
-        //else if ((distance_FT > maxDistance || angle_FT > maxAngle) && ((i % 2 == 1) && _isMovingEven == false)) // Odd
-        //{
-        //    _isMovingOdd = true;
-        //}
-        //else if ((distance_FT < minDistance && angle_FT < minAngle) && (i % 2 == 0))  
-        //{
-        //    _isMovingEven = false;
-        //}
-        //else if ((distance_FT < minDistance && angle_FT < minAngle) && (i % 2 == 1))
-        //{
-        //    _isMovingOdd = false;
-        //}
-
+                                                                     // (x_value <= Mathf.PI && x_value > 0)
+        //  If either the distance or angle have surpassed their respective thresholds, then the foot will move (The x_value is used to ensure that when the foot is lifted, it will return to the ground)
         if (((distance_FT > maxDistance) || (angle_FT > maxAngle) || (x_value <= Mathf.PI && x_value > 0)) && _oppMoving == false)   //If the foot is lifted, continue the lifting until it resets its rotation to 0
         {
             return true;
         }
-        else if (distance_FT < minDistance && angle_FT < minAngle && x_value == 0 && _oppMoving == false) //  For clarity, both position and angle have to be minimized in order for foot to completely rest
+        else if (((distance_FT < minDistance && angle_FT < minAngle) || x_value == 0) && _oppMoving == false) //  For clarity, both position and angle have to be minimized in order for foot to completely rest
         {
             _oppMoving = true;          //Set the opposite bool to true in order for it to catch-up with the other one
             return false;
@@ -167,8 +153,9 @@ public class KinematicCtrl : MonoBehaviour
     {
         if (_isMovingIndex && x_value < Mathf.PI)
         {
-            footIKPos[i].position = Vector3.Lerp(footIKPos[i].position, futureFootPosition[i].position, velocity * Time.deltaTime);
-            footIKPos[i].rotation = Quaternion.Lerp(footIKPos[i].rotation, futureFootPosition[i].rotation, velocity * Time.deltaTime);            
+            footIKPos[i].position = Vector3.MoveTowards(footIKPos[i].position, futureFootPosition[i].position, velocity * Time.deltaTime);
+            footIKPos[i].rotation = Quaternion.Lerp(footIKPos[i].rotation, futureFootPosition[i].rotation, velocity * Time.deltaTime);
+            footVerticalPos(velocity, i, _isMovingIndex);
         }
         else
         {
@@ -176,26 +163,28 @@ public class KinematicCtrl : MonoBehaviour
         }
     }
 
-    public void footVerticalPos( float velocity, int i, bool _isMovingIndex)
+    public void footVerticalPos(float velocity, int i, bool _isMovingIndex)
     {
-        //float height = (velocity * 0.095f);
+        //height = (velocity * 0.095f);        
                 
         if (x_value < Mathf.PI && x_value >= 0)
         {
             x_value += (velocity) * Time.deltaTime;     //If isMoving is false, x will be 0 (Look in translateFoot())
+            //max_X += (velocity * height) * Time.deltaTime;
         }
         else
         {
             _isMovingIndex = false;
             x_value = 0;
+            //max_X = 0;
         }
 
-        _touchedGround = (x_value >= 2.6)? true : false;    //Checks after the rotation reaches a certain radian angle
+        //_touchedGround = (x_value >= 2.6)? true : false;    //Checks after the rotation reaches a certain radian angle
 
-        if (!_touchedGround)
-        {
-            translateFoot(velocity, i, _isMovingIndex);
-        }
+        //if (!_touchedGround)
+        //{
+        //    translateFoot(velocity, i, _isMovingIndex);
+        //}
 
         highestPoint = (highestPoint < height) ? height : highestPoint;
 
