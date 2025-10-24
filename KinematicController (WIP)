@@ -51,7 +51,7 @@ public class KinematicController : MonoBehaviour
     public float period;
 
     [Header("Editable Parameters")]
-    public float acceleration = 8;
+    public float acceleration = 3;
     public float heightDamping = 0.4; //set to {0 < heightDamping < 1}
 
     // Reduce the amount of steps to take by incrementing the stepping reduction (Recommended: greater than 10 will allow for the feet to Lerp faster)
