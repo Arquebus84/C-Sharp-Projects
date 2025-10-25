@@ -1,3 +1,5 @@
+/***NOTE: This version will not have the legs move one at a time */
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
