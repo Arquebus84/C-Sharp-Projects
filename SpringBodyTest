@@ -1,0 +1,8 @@
+Using System.Unity;
+
+//Implement Hooke's law: F_sprimg = -kx (-k*position)
+//Lerp the body towards the new position using kinematics: v_f^2 = v_0^2 +2a(deltaX)
+
+public Update(){
+
+}
