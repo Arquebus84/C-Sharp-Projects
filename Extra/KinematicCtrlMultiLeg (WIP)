@@ -1,0 +1,199 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+/**
+ *  Title: KinematicCtrl
+ *  Description: Utilizing kinematic equations from Physics, create a procedurally animated leg system for a multi-legged creature *
+ */
+
+public class KinematicCtrl : MonoBehaviour
+{
+    /**
+            Kinematic Equations:
+    x_f = v_avg*t + x_0
+    x_f = x_0 + v_0t + 0.5*a*t^2
+    v = v_0 + at
+    v^2 = (v_0)^2 + 2a(x - x_0) ===>    v = sqrt[ (v_0)^2 + 2a(x - x_0) ]
+     
+     */
+
+    //  Parameters
+    public LayerMask groundLayer;
+
+    //  Hips (Base) will act as x_0; futureFootPosition will be x (final position)
+    public Transform[] FootHipBase, footMesh, footIKPos, futureFootPosition;        //Removed footBase (Bone)
+
+    [Header("Calculated Parameters")]
+    //  Distance (targetPosVector - footPosVector) will be deltaX
+    public float EvenDistance_FT;       //distance_FT;                //For every index, organize by even and odd in order to retain the kinematics with respect to those objects (foot)
+    public float OddDistance_FT;
+    public float EvenAngle_FT, OddAngle_FT;             //angle_FT;
+    //  Velocity at t = 0 will be 0
+    public float EvenVelocity, OddVelocity;         //velocity;            //Velocity will be different when changing from evens to odds (one foot after another)
+
+    public bool _isMovingEven = false, _isMovingOdd = false;
+    public float x_value = 0;
+    public bool _touchedGround;
+
+    public float highestPoint = 0;
+    public int index = 0;
+
+    public float height;
+    public float max_X;
+
+    [Header("Editable Parameters")]
+    //public float height;    //Can Edit later
+
+    public float acceleration;
+    public float maxDistance = 0.2f;
+    public float minDistance = 0.05f;
+    public float maxAngle = 1.55f;
+    public float minAngle = 0.2f;
+
+
+    // Update is called once per frame
+    void Update()
+    {
+        //  Calculate distance, angle, and velocity for even and odds
+        //Angle in Radians is more efficient
+        //  I_Velocity is 0, and time will not be specified, therefore
+        //  Velocity = sqrt[(I_velocity)^2 + (acceleration * distance_FT)]
+        //distance_FT = Mathf.Abs(Vector3.Distance(footIKPos[i].position, futureFootPosition[i].position));
+        //angle_FT = Mathf.Abs(Mathf.DeltaAngle(footIKPos[i].eulerAngles.y, futureFootPosition[i].eulerAngles.y)) * Mathf.Deg2Rad;
+        //velocity = (angle_FT < maxAngle) ? Mathf.Sqrt(acceleration * distance_FT) : Mathf.Sqrt(acceleration * distance_FT * angle_FT);
+        
+        if (index == FootHipBase.Length - 1)
+            index = 0;
+        else
+        {
+            index++;
+        }
+        for (int i = 0; i < FootHipBase.Length; i++)
+        {   
+            groundCheck(i);
+
+            if (index % 2 == 0)
+            {
+                _isMovingEven = checkDistance(footMesh[index], footIKPos[index], EvenDistance_FT, EvenAngle_FT, _isMovingOdd, index);
+
+                EvenDistance_FT = Mathf.Abs(Vector3.Distance(footIKPos[index].position, futureFootPosition[index].position));
+                EvenAngle_FT = Mathf.Abs(Mathf.DeltaAngle(footIKPos[index].eulerAngles.y, futureFootPosition[index].eulerAngles.y)) * Mathf.Deg2Rad;
+                EvenVelocity = (EvenAngle_FT < maxAngle) ? Mathf.Sqrt(acceleration * EvenDistance_FT) : Mathf.Sqrt(acceleration * EvenDistance_FT * EvenAngle_FT);
+
+                if (_isMovingEven == true)
+                {
+                    //footVerticalPos(EvenVelocity, index, _isMovingEven);
+                    translateFoot(EvenVelocity, index, _isMovingEven);
+                }
+            }
+            else if (index % 2 == 1)
+            {
+                _isMovingOdd = checkDistance(footMesh[index], footIKPos[index], OddDistance_FT, OddAngle_FT, _isMovingEven, index);
+
+                OddDistance_FT = Mathf.Abs(Vector3.Distance(footIKPos[index].position, futureFootPosition[index].position));
+                OddAngle_FT = Mathf.Abs(Mathf.DeltaAngle(footIKPos[index].eulerAngles.y, futureFootPosition[index].eulerAngles.y)) * Mathf.Deg2Rad;
+                OddVelocity = (OddAngle_FT < maxAngle) ? Mathf.Sqrt(acceleration * OddDistance_FT) : Mathf.Sqrt(acceleration * OddDistance_FT * OddAngle_FT);                
+
+                if (_isMovingOdd == true)
+                {
+                    //footVerticalPos(OddVelocity, index, _isMovingOdd);
+                    translateFoot(OddVelocity, index, _isMovingOdd);
+                }
+            }
+        }
+    }
+
+    public bool checkDistance(Transform foot, Transform pos, float distance_FT, float angle_FT, bool _oppMoving, int i)
+    {
+        foot.position = pos.position;
+        foot.rotation = pos.rotation;
+                                                                     // (x_value <= Mathf.PI && x_value > 0)
+        //  If either the distance or angle have surpassed their respective thresholds, then the foot will move (The x_value is used to ensure that when the foot is lifted, it will return to the ground)
+        if (((distance_FT > maxDistance) || (angle_FT > maxAngle) || (x_value <= Mathf.PI && x_value > 0)) && _oppMoving == false)   //If the foot is lifted, continue the lifting until it resets its rotation to 0
+        {
+            return true;
+        }
+        else if (((distance_FT < minDistance && angle_FT < minAngle) || x_value == 0) && _oppMoving == false) //  For clarity, both position and angle have to be minimized in order for foot to completely rest
+        {
+            _oppMoving = true;          //Set the opposite bool to true in order for it to catch-up with the other one
+            return false;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    public void groundCheck(int i)
+    {
+        Vector3 groundBase = new Vector3(futureFootPosition[i].position.x, FootHipBase[i].position.y, futureFootPosition[i].position.z);
+        Ray ray = new Ray(groundBase, -transform.up);
+        RaycastHit hitInfo;
+
+        Vector3 hitPoint;
+        if (Physics.Raycast(ray, out hitInfo, 3.0f, groundLayer))
+        {
+            hitPoint = new Vector3(futureFootPosition[i].position.x, hitInfo.point.y, futureFootPosition[i].position.z);
+            futureFootPosition[i].position = hitPoint;
+                                    
+            Debug.DrawLine(ray.origin, hitInfo.point, Color.green);
+        }
+        else
+        {
+            Debug.DrawLine(ray.origin, ray.origin + ray.direction * 2.0f, Color.red);
+        }
+    }
+
+    /**
+     * With multiple feet, every odd index (1, 3, n) will be translated after every even index (0, 2)
+     */
+    public void translateFoot(float velocity, int i, bool _isMovingIndex)
+    {
+        if (_isMovingIndex && x_value < Mathf.PI)
+        {
+            footIKPos[i].position = Vector3.MoveTowards(footIKPos[i].position, futureFootPosition[i].position, velocity * Time.deltaTime);
+            footIKPos[i].rotation = Quaternion.Lerp(footIKPos[i].rotation, futureFootPosition[i].rotation, velocity * Time.deltaTime);
+            footVerticalPos(velocity, i, _isMovingIndex);
+        }
+        else
+        {
+            x_value = 0;
+        }
+    }
+
+    public void footVerticalPos(float velocity, int i, bool _isMovingIndex)
+    {
+        //height = (velocity * 0.095f);        
+                
+        if (x_value < Mathf.PI && x_value >= 0)
+        {
+            x_value += (velocity) * Time.deltaTime;     //If isMoving is false, x will be 0 (Look in translateFoot())
+            //max_X += (velocity * height) * Time.deltaTime;
+        }
+        else
+        {
+            _isMovingIndex = false;
+            x_value = 0;
+            //max_X = 0;
+        }
+
+        //_touchedGround = (x_value >= 2.6)? true : false;    //Checks after the rotation reaches a certain radian angle
+
+        //if (!_touchedGround)
+        //{
+        //    translateFoot(velocity, i, _isMovingIndex);
+        //}
+
+        highestPoint = (highestPoint < height) ? height : highestPoint;
+
+        //  Y position modifies the vertical position of the foot
+        //  Using a*Sin(n*x) + h, modify the amplitude (a) and the duration (n) using velocity;
+        //      use target vertical position to adjust the height (h) of the footstep
+        Vector3 y_Pos = new Vector3(footIKPos[i].position.x,
+            futureFootPosition[i].position.y + (height * Mathf.Sin(x_value)),
+            footIKPos[i].position.z);
+        footIKPos[i].position = y_Pos;
+    }
+}
