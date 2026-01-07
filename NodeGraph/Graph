@@ -1,0 +1,63 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Graph<V>
+{
+    Dictionary<V, LinkedList<V>> adjList;
+    Dictionary<V, Int32> vertexList;
+    Dictionary<Int32, V> edgeList;
+    int size = 0, size2 = 0;
+
+    public Graph()
+    {
+        adjList = new Dictionary<V, LinkedList<V>>();
+        vertexList = new Dictionary<V, Int32>();
+        edgeList = new Dictionary<Int32, V>();
+    }
+
+    public Dictionary<V, LinkedList<V>> getAdjList() {  return adjList; }
+    public Dictionary<V, Int32> getVertexList() { return vertexList; }
+    public Dictionary<Int32, V> getEdgeList() { return edgeList; }
+
+    public void addVertex(V v)
+    {
+        if (!adjList.ContainsKey(v))
+        {
+            adjList.Add(v, new LinkedList<V>());
+            vertexList.Add(v, size++);
+            edgeList.Add(size2++, v);
+        }
+        else
+        {
+            Console.WriteLine("Vertex " + v + " already exists");
+        }
+    }
+    public void addEdge(V vertex1, V vertex2)
+    {
+        if(adjList.ContainsKey(vertex1) && adjList.ContainsKey(vertex2))
+        {
+            adjList.GetValueOrDefault(vertex1).AddLast(vertex2);
+            adjList.GetValueOrDefault(vertex2).AddLast(vertex1);
+        }
+        else
+        {
+            Console.WriteLine("At least one vertex is missing");
+        }
+    }
+
+    public void displayGraph()
+    {
+        foreach ((V v, LinkedList<V> list) in adjList)
+        {
+            Debug.Log(v + "->");
+            foreach (var adj in list)
+            {
+                Debug.Log("->" + adj);
+            }
+            //Debug.Log(v + "->" + adj.ToString());
+        }
+    }
+
+    
+}
